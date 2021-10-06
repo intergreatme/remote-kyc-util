@@ -1,5 +1,5 @@
 <?php
-    /**
+	/**
 	* IdNumberValidatorZa - Converted IGM Java code of our South African ID number validator into a static class.
 	*
 	* @author    James Lawson
@@ -9,15 +9,15 @@
 	* FITNESS FOR A PARTICULAR PURPOSE.
 	*/
 
-    class IdNumberValidatorZa {
-        public static function IsIdNumberValid($rsaIdNumber, $dateOfBirth = null, $gender = null) {
+	class IdNumberValidatorZa {
+		public static function IsIdNumberValid($rsaIdNumber, $dateOfBirth = null, $gender = null) {
 
-            $rsaIdNumber = trim($rsaIdNumber);
-            $rsaIdNumber = str_replace(' ', '', $rsaIdNumber);
+			$rsaIdNumber = trim($rsaIdNumber);
+			$rsaIdNumber = str_replace(' ', '', $rsaIdNumber);
 
-            if(IdNumberValidatorZa::doBasicIdValidation($rsaIdNumber)) {
-                return false;
-            }
+			if(IdNumberValidatorZa::doBasicIdValidation($rsaIdNumber)) {
+				return false;
+			}
 			if($dateOfBirth != null) {
 				// adjust for future dates by subtracting 100 years, if necessary
 				$parsedDateOfBirth = new DateTime(substr($rsaIdNumber, 0, 2).'-'.substr($rsaIdNumber, 2, 2).'-'.substr($rsaIdNumber, 4, 2));
@@ -38,65 +38,65 @@
 					}
 				}
 			}
-            return !IdNumberValidatorZa::checkModulus($rsaIdNumber);
-        }
+			return !IdNumberValidatorZa::checkModulus($rsaIdNumber);
+		}
 
-        public static function checkModulus($rsaIdNumber) {
-            $idx = 1;
-            $accum = 0;
-            while($idx < strlen($rsaIdNumber)) {
-                $digit = $rsaIdNumber[$idx - 1];
-                if($idx % 2 == 0) {
-                    $evenMulti = $digit * 2;
-                    $accum += ((int)($evenMulti / 10) + ($evenMulti % 10));
-                } else {
-                    $accum += $digit;
-                }
-                $idx++;
-            }
-            $lowDigit = $accum % 10;
-            $lastDigit = $rsaIdNumber[strlen($rsaIdNumber) - 1];
-            $checkDigit = $lowDigit == 0 ? 0 : 10 - $lowDigit;
-            error_log('lastDigit = '.$lastDigit.' check digit: '.$checkDigit);
-            if($lastDigit != $checkDigit) {
-                error_log('RSA ID number check digit mismatch. Check digit: '.$checkDigit.', Last digit: '.$lastDigit, 0);
-                return true;
-            }
-            return false;
-        }
+		public static function checkModulus($rsaIdNumber) {
+			$idx = 1;
+			$accum = 0;
+			while($idx < strlen($rsaIdNumber)) {
+				$digit = $rsaIdNumber[$idx - 1];
+				if($idx % 2 == 0) {
+					$evenMulti = $digit * 2;
+					$accum += ((int)($evenMulti / 10) + ($evenMulti % 10));
+				} else {
+					$accum += $digit;
+				}
+				$idx++;
+			}
+			$lowDigit = $accum % 10;
+			$lastDigit = $rsaIdNumber[strlen($rsaIdNumber) - 1];
+			$checkDigit = $lowDigit == 0 ? 0 : 10 - $lowDigit;
+			error_log('lastDigit = '.$lastDigit.' check digit: '.$checkDigit);
+			if($lastDigit != $checkDigit) {
+				error_log('RSA ID number check digit mismatch. Check digit: '.$checkDigit.', Last digit: '.$lastDigit, 0);
+				return true;
+			}
+			return false;
+		}
 
-        private static function doBasicIdValidation($rsaIdNumber) {
-            if($rsaIdNumber == null || empty($rsaIdNumber)) {
-                error_log('No RSA ID number specified', 0);
-                return true;
-            }
+		private static function doBasicIdValidation($rsaIdNumber) {
+			if($rsaIdNumber == null || empty($rsaIdNumber)) {
+				error_log('No RSA ID number specified', 0);
+				return true;
+			}
 
-            if(strlen($rsaIdNumber) != 13) {
-                error_log('RSA ID number has insufficient characters. Length: {'.strlen($rsaIdNumber).'}', 0);
-                return true;
-            }
-            // rsaIdPosPatHasOnlyNumeric
-            $matches = array();
-            preg_match('/^[0-9]+?$/', $rsaIdNumber, $matches);
-            if(count($matches) == 0) {
-                error_log('RSA ID number has non-numeric characters', 0);
-                return true;
-            }
-            // rsaIdNegPatHasOnlyRepeatedNumeric
-            $matches = array();
-            preg_match('/^1+?$|^2+?$|^3+?$|^4+?$|^5+?$|^6+?$|^7+?$|^8+?$|^9+?$|^0+?$/', $rsaIdNumber, $matches);
-            if(count($matches) > 0) {
-                error_log('RSA ID number has only a single repeated character', 0);
-                return true;
-            }
-            // rsaIdNegPatHasStartFourZeroes
-            $matches = array();
-            preg_match('/^0000.*?$/', $rsaIdNumber, $matches);
-            if(count($matches) > 0 || substr($rsaIdNumber, 0, 4) == 0000) {
-                error_log('RSA ID number starts with four zeroes');
-                return true;
-            }
-            return false;
-        }
-    }
+			if(strlen($rsaIdNumber) != 13) {
+				error_log('RSA ID number has insufficient characters. Length: {'.strlen($rsaIdNumber).'}', 0);
+				return true;
+			}
+			// rsaIdPosPatHasOnlyNumeric
+			$matches = array();
+			preg_match('/^[0-9]+?$/', $rsaIdNumber, $matches);
+			if(count($matches) == 0) {
+				error_log('RSA ID number has non-numeric characters', 0);
+				return true;
+			}
+			// rsaIdNegPatHasOnlyRepeatedNumeric
+			$matches = array();
+			preg_match('/^1+?$|^2+?$|^3+?$|^4+?$|^5+?$|^6+?$|^7+?$|^8+?$|^9+?$|^0+?$/', $rsaIdNumber, $matches);
+			if(count($matches) > 0) {
+				error_log('RSA ID number has only a single repeated character', 0);
+				return true;
+			}
+			// rsaIdNegPatHasStartFourZeroes
+			$matches = array();
+			preg_match('/^0000.*?$/', $rsaIdNumber, $matches);
+			if(count($matches) > 0 || substr($rsaIdNumber, 0, 4) == 0000) {
+				error_log('RSA ID number starts with four zeroes');
+				return true;
+			}
+			return false;
+		}
+	}
 ?>
