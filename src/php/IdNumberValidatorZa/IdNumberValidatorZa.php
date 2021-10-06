@@ -18,22 +18,26 @@
             if(IdNumberValidatorZa::doBasicIdValidation($rsaIdNumber)) {
                 return false;
             }
-            // adjust for future dates by subtracting 100 years, if necessary
-            $parsedDateOfBirth = new DateTime(substr($rsaIdNumber, 0, 2).'-'.substr($rsaIdNumber, 2, 2).'-'.substr($rsaIdNumber, 4, 2));
-            if($parsedDateOfBirth > new DateTime()) {
-                $parsedDateOfBirth->modify('-100 year'); 
-            }
-            if((new DateTime(substr($dateOfBirth, 0, 2).'-'.substr($dateOfBirth, 2, 2).'-'.substr($dateOfBirth, 4, 2))) != $parsedDateOfBirth) {
-                error_log('RSA ID number Date of Birth does not match supplied Date of Birth', 0);
-                return false;
-            }
-            $gender = strtoupper($gender);
-            if($gender != null && ($gender == 'F' || $gender == 'M')) {
-                if($rsaIdNumber[6] > 4 && $gender == 'F' || $rsaIdNumber[6] < 5 && $gender = 'M') {
-                    error_log('RSA ID number gender does not match suplied gender', 0);
-                    return false;
-                }
-            }
+			if($dateOfBirth != null) {
+				// adjust for future dates by subtracting 100 years, if necessary
+				$parsedDateOfBirth = new DateTime(substr($rsaIdNumber, 0, 2).'-'.substr($rsaIdNumber, 2, 2).'-'.substr($rsaIdNumber, 4, 2));
+				if($parsedDateOfBirth > new DateTime()) {
+					$parsedDateOfBirth->modify('-100 year'); 
+				}
+				if((new DateTime(substr($dateOfBirth, 0, 2).'-'.substr($dateOfBirth, 2, 2).'-'.substr($dateOfBirth, 4, 2))) != $parsedDateOfBirth) {
+					error_log('RSA ID number Date of Birth does not match supplied Date of Birth', 0);
+					return false;
+				}
+			}
+			if($gender != null) {
+				$gender = strtoupper($gender);
+				if($gender != null && ($gender == 'F' || $gender == 'M')) {
+					if($rsaIdNumber[6] > 4 && $gender == 'F' || $rsaIdNumber[6] < 5 && $gender = 'M') {
+						error_log('RSA ID number gender does not match suplied gender', 0);
+						return false;
+					}
+				}
+			}
             return !IdNumberValidatorZa::checkModulus($rsaIdNumber);
         }
 
