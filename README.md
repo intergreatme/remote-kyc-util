@@ -1,7 +1,7 @@
 # Intergreatme Remote-KYC Utilities
 IGM Remote-KYC-Util is a set of tools to help developers consume services from Intergreatme (www.intergreatme.com)
 
-Making use of the IGM KYC portal works off of a service provider sending us a whitelist entry to kickstart the process. Thereafter, IGM will send various responses back to the service provider as the user goes through the process. The intent with being verbose is to ensure the service provider can provide adequate support to the user to reduce the need for IGM to facilitate support.
+Making use of the IGM KYC portal works off of a service provider sending us a allowlist entry to kickstart the process. Thereafter, IGM will send various responses back to the service provider as the user goes through the process. The intent with being verbose is to ensure the service provider can provide adequate support to the user to reduce the need for IGM to facilitate support.
 
 These are broken into three categories:
 - Status:

@@ -1,7 +1,7 @@
 <?php
     /**
-    * Whitelist creator - A utility end point for handling app-to-server request/response cycle for starting a whitelist
-    * transaction on the IGM platform. The sample code demonstrates how an organisation might invoke whitelist transactions
+    * Allowlist creator - A utility end point for handling app-to-server request/response cycle for starting a allowlist
+    * transaction on the IGM platform. The sample code demonstrates how an organisation might invoke allowlist transactions
     * from their own infrastructure.
     *
     * @author    James Lawson
@@ -34,8 +34,8 @@
     // company is only required for our use case, you can probably remove it
     $db['company'] = isset($_GET['name']) ? $_GET['name'] : null;
     $db['config_id'] = ''; // REQUIRED: Add your config ID here
-    $db['category_type'] = 'whitelist';
-    $db['tx_status'] = 'whitelist_start';
+    $db['category_type'] = 'allowlist';
+    $db['tx_status'] = 'allowlist_start';
     // Get the input from the POST
     $object = file_get_contents('php://input');
     // Sanity checks, quick escapes
@@ -81,7 +81,7 @@
     //echo '<pre style="white-space: pre-wrap; white-space: -moz-pre-wrap; white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word; color: gray;">JSON to SEND:'.PHP_EOL.json_encode($object).'</pre>';
 
     // setup cURL to POST this to the server
-    $url = 'https://dev.intergreatme.com/kyc/za/api/integration/whitelist/'.$db['config_id'];
+    $url = 'https://dev.intergreatme.com/kyc/za/api/integration/allowlist/'.$db['config_id'];
     //echo 'URL: '.$url.PHP_EOL;
     $curl = curl_init();
     curl_setopt($curl, CURLOPT_URL,$url);
