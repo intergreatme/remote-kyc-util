@@ -50,7 +50,7 @@ func main() {
 	handler := handlers.NewHandler(db, c)
 
 	// Set up routes and start server
-	routes.Router(handler)
+	router := routes.Router(handler)
 
 	// Check if IGM certificate already exist or download if not. Also verify that a private key of your own signature is present
 	err = certs.FetchCertificates(handler.Config.ID)
@@ -59,7 +59,7 @@ func main() {
 	}
 
 	log.Println("Starting server on :8081")
-	if err := http.ListenAndServe(":8081", nil); err != nil {
+	if err := http.ListenAndServe(":8081", router); err != nil {
 		log.Fatalf("could not start server: %s\n", err)
 	}
 }

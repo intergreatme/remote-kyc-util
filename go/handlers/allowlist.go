@@ -7,6 +7,7 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"path/filepath"
 	"time"
 
 	"github.com/google/uuid"
@@ -40,7 +41,9 @@ func (h *Handler) AllowlistHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	privateKey, err := selfsign.LoadPrivateKey("/keys/key.pem", h.Config.PvtKeyPassword)
+	keyFile := filepath.Join("keys", "key.pem")
+
+	privateKey, err := selfsign.LoadPrivateKey(keyFile, h.Config.PvtKeyPassword)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

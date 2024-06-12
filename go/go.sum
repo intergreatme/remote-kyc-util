@@ -10,6 +10,8 @@ github.com/intergreatme/selfsign v0.0.0-20240612122348-1bde6860a18c h1:hbgNDMniz
 github.com/intergreatme/selfsign v0.0.0-20240612122348-1bde6860a18c/go.mod h1:6jU2PO/5hMAebCSFwAld4KQx+mGZh+YljpOuY9AyLCQ=
 github.com/intergreatme/selfsign v0.0.0-20240612132033-b224853fa9fb h1:FbcU4zn0eHA5KBWZvSKkvRkTzSqt/ihudgHibpE66pE=
 github.com/intergreatme/selfsign v0.0.0-20240612132033-b224853fa9fb/go.mod h1:6jU2PO/5hMAebCSFwAld4KQx+mGZh+YljpOuY9AyLCQ=
+github.com/intergreatme/selfsign v0.0.0-20240612144424-59f23c82cfaa h1:OjuBTlTrJedf53EyvqdrVDkkMNK3YKBC3xCSQgiyKI4=
+github.com/intergreatme/selfsign v0.0.0-20240612144424-59f23c82cfaa/go.mod h1:6jU2PO/5hMAebCSFwAld4KQx+mGZh+YljpOuY9AyLCQ=
 github.com/mattn/go-sqlite3 v1.14.22 h1:2gZY6PC6kBnID23Tichd1K+Z0oS6nE/XwU+Vz/5o4kU=
 github.com/mattn/go-sqlite3 v1.14.22/go.mod h1:Uh1q+B4BYcTPb+yiD3kU8Ct7aC0hY9fxUwlHK0RXw+Y=
 golang.org/x/crypto v0.24.0 h1:mnl8DM0o513X8fdIkmyFE/5hTYxbwYOjDS/+rK6qpRI=

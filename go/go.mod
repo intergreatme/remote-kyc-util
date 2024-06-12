@@ -4,7 +4,7 @@ go 1.22.4
 
 require (
 	github.com/caelisco/http-client v0.0.0-20240603024320-87529bec125a
-	github.com/intergreatme/selfsign v0.0.0-20240612132033-b224853fa9fb
+	github.com/intergreatme/selfsign v0.0.0-20240612144424-59f23c82cfaa
 	github.com/mattn/go-sqlite3 v1.14.22
 )
 
