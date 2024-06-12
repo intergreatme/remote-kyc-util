@@ -53,7 +53,7 @@ func AllowlistAPI(rp RequestPayload, configID string) (response.APIResponse, res
 	opt.AddHeader("Content-Type", "application/json")
 	opt.AddHeader("Content-Encoding", "gzip")
 
-	resp, err := client.Post("url"+configID, compressedData, opt)
+	resp, err := client.Post("https://dev.intergreatme.com/kyc/za/api/integration/v2/allowlist/"+configID, compressedData, opt)
 	if err != nil {
 		return response.APIResponse{}, response.ErrorResponse{}, fmt.Errorf("failed to make API call: %v", err)
 	}

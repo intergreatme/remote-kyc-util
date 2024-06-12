@@ -12,16 +12,15 @@ import (
 func SetupTable(db *sql.DB) {
 	createTableSQL := `CREATE TABLE IF NOT EXISTS TRANSACTIONS (
         id INTEGER PRIMARY KEY,
-        category_type TEXT,
-        company TEXT,
-        config_id TEXT,
         origin_tx_id TEXT,
         order_number TEXT,
+        company TEXT,
+        config_id TEXT,
         tx_id TEXT,
         payload TEXT,
         response TEXT,
-        tx_status TEXT,
         errors TEXT,
+        tx_status TEXT,
         time DATETIME DEFAULT CURRENT_TIMESTAMP
     );`
 

@@ -3,10 +3,13 @@ package handlers
 import (
 	"crypto/rsa"
 	"encoding/json"
+	"fmt"
 	"log"
+	"math/rand"
 	"net/http"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/intergreatme/remote-kyc-util/allowlist"
 	"github.com/intergreatme/remote-kyc-util/request"
 	"github.com/intergreatme/selfsign"
@@ -19,6 +22,10 @@ func (h *Handler) AllowlistHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
+
+	// Generate a new origin_tx_id and order number
+	a.OriginTxID = uuid.New().String()
+	a.OrderNumber = fmt.Sprintf("%d%04d", time.Now().Unix(), rand.Intn(10000))
 
 	// Validate mandatory fields (add validation logic here)
 	if err := a.Validate(); err != nil {
@@ -67,19 +74,45 @@ func (h *Handler) AllowlistHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		// Convert the payload to JSON bytes
+		payloadBytes, err := respOK.Payload.ToJSONBytes()
+		if err != nil {
+			http.Error(w, "Unable to convert payload to JSON bytes", http.StatusInternalServerError)
+			return
+		}
+
 		// Handle and verify the API response
-		err = selfsign.VerifySignature(cert.PublicKey.(*rsa.PublicKey), []byte(respOK.Payload), []byte(respOK.Signature))
+		err = selfsign.VerifySignature(cert.PublicKey.(*rsa.PublicKey), payloadBytes, []byte(respOK.Signature))
 		if err != nil {
 			http.Error(w, "Unable to verify signature", http.StatusInternalServerError)
 			return
 		}
 
-		// TODO Store the OK response in the database
+		// Store the OK response in the database
+		sql := `INSERT INTO transactions 
+		(origin_tx_id, tx_id, order_number, company, config_id, payload, response) 
+		VALUES (?, ?, ?, ?, ?, ?, ?)`
+		_, err = h.DB.Exec(sql, respOK.Payload.Data.OriginTxID, respOK.Payload.Data.TxID, a.OrderNumber, "IGM-Test", h.Config.ID, payloadJSON, respOK)
+		if err != nil {
+			http.Error(w, "Unable to insert new record into transaction table", http.StatusInternalServerError)
+			return
+		}
+		log.Println("Ok Response stored in db.")
+	}
+	if !respErr.IsEmpty() {
+
+		// Store the ERROR response in the database
+		sql := `INSERT INTO transactions 
+	(origin_tx_id, tx_id, order_number, company, config_id, payload, response, errors) 
+	VALUES (?, ?, ?, ?, ?, ?, ?)`
+		_, err = h.DB.Exec(sql, respOK.Payload.Data.OriginTxID, respOK.Payload.Data.TxID, a.OrderNumber, "IGM-Test", h.Config.ID, payloadJSON, respErr, respErr.Errors)
+		if err != nil {
+			http.Error(w, "Unable to insert new record into transaction table", http.StatusInternalServerError)
+			return
+		}
+		log.Println("Error Response stored in db.")
 
 	}
-
-	// TODO Store the ERROR response in the database
-
 	// Respond with the API response
 	w.Header().Set("Content-Type", "application/json")
 	w.Write([]byte("OK"))
