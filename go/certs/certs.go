@@ -10,7 +10,7 @@ import (
 	"github.com/intergreatme/selfsign"
 )
 
-func EnsureKeysDir(dir string) error {
+func CheckDirectory(dir string) error {
 	// Check if the directory exists
 	if err := os.MkdirAll(dir, 0755); err != nil && !os.IsExist(err) {
 		return errors.New("could not create keys directory")
@@ -18,23 +18,23 @@ func EnsureKeysDir(dir string) error {
 	return nil
 }
 
-func LoadCertificates(configID string) error {
+func FetchCertificates(configID string) error {
 	keysDir := "keys"
 
-	// Ensure keys directory exists
-	err := EnsureKeysDir(keysDir)
+	// Check keys directory exists
+	err := CheckDirectory(keysDir)
 	if err != nil {
 		return err
 	}
 
-	certFile := filepath.Join(keysDir, "certs.pfx")
+	certFile := filepath.Join(keysDir, "igm_certs.pem")
 	keyFile := filepath.Join(keysDir, "key.pem")
 
-	// Check if the certs.pfx file exists
+	// Check if the igm_certs.pfx file exists
 	if _, err := os.Stat(certFile); os.IsNotExist(err) {
 		// Download certificate if it does not exist
 		uri := fmt.Sprintf("https://dev.intergreatme.com/kyc/za/api/integration/signkey/%v", configID)
-		err = selfsign.Download(uri, keysDir, "certs.pfx")
+		err = selfsign.DownloadAndExtractCert(uri, keysDir, "igm_certs.pem")
 		if err != nil {
 			return fmt.Errorf("could not download key from IGM: %v", err)
 		}

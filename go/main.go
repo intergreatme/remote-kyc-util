@@ -6,18 +6,36 @@ import (
 	"net/http"
 
 	"github.com/intergreatme/remote-kyc-util/certs"
+	"github.com/intergreatme/remote-kyc-util/config"
 	"github.com/intergreatme/remote-kyc-util/database"
+	"github.com/intergreatme/remote-kyc-util/handlers"
 	"github.com/intergreatme/remote-kyc-util/routes"
 )
 
 func main() {
-	// Fetch config and initialize flags
+	// Fetch flags
 	dbFile := flag.String("dbfile", "transactions.sqlite3", "SQLite3 database file")
 	configID := flag.String("config", "", "Customer config ID")
+	password := flag.String("password", "", "Private key password")
 	flag.Parse()
 
-	if *configID == "" {
-		log.Fatal("Config ID is required. \n Usage: go run . config=<CONFIG_ID_HERE>")
+	c := handlers.Config{}
+
+	if *configID == "" || *password == "" {
+		configFile, err := config.ReadConfigFile("config.yaml")
+		if err != nil {
+			log.Fatalf("Config ID or password not provided and could not read from config file: %v", err)
+		}
+
+		c.ID = configFile.ConfigID
+		c.PvtKeyPassword = configFile.Password
+	} else {
+		c.ID = *configID
+		c.PvtKeyPassword = *password
+	}
+
+	if c.ID == "" || c.PvtKeyPassword == "" {
+		log.Fatal("Config ID and password are required either as flags or in the config.yaml file.")
 	}
 
 	db, err := database.Connection(*dbFile)
@@ -29,12 +47,13 @@ func main() {
 	// Create transactions table if it does not exists
 	database.SetupTable(db)
 
-	// Set up routes and start server
-	routes.Router()
+	handler := handlers.NewHandler(db, c)
 
-	log.Println()
-	// Load Certificates
-	err = certs.LoadCertificates(*configID)
+	// Set up routes and start server
+	routes.Router(handler)
+
+	// Check if IGM certificate already exist or download if not. Also verify that a private key of your own signature is present
+	err = certs.FetchCertificates(handler.Config.ID)
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -30,7 +30,7 @@ func (r *RequestPayload) FromJSON(data []byte) error {
 	return json.Unmarshal(data, r)
 }
 
-func CallAPI(rp RequestPayload) (response.APIResponse, response.ErrorResponse, error) {
+func AllowlistAPI(rp RequestPayload, configID string) (response.APIResponse, response.ErrorResponse, error) {
 
 	b, err := rp.ToJSON()
 	if err != nil {
@@ -53,8 +53,7 @@ func CallAPI(rp RequestPayload) (response.APIResponse, response.ErrorResponse, e
 	opt.AddHeader("Content-Type", "application/json")
 	opt.AddHeader("Content-Encoding", "gzip")
 
-	config := "" // TODO
-	resp, err := client.Post("url"+config, compressedData, opt)
+	resp, err := client.Post("url"+configID, compressedData, opt)
 	if err != nil {
 		return response.APIResponse{}, response.ErrorResponse{}, fmt.Errorf("failed to make API call: %v", err)
 	}
