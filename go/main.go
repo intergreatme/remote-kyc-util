@@ -5,8 +5,8 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/intergreatme/remote-kyc-util/certs"
 	"github.com/intergreatme/remote-kyc-util/database"
-	"github.com/intergreatme/remote-kyc-util/file"
 	"github.com/intergreatme/remote-kyc-util/routes"
 )
 
@@ -20,7 +20,7 @@ func main() {
 		log.Fatal("Config ID is required. \n Usage: go run . config=<CONFIG_ID_HERE>")
 	}
 
-	db, err := database.SetupConnection(*dbFile)
+	db, err := database.Connection(*dbFile)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -34,7 +34,7 @@ func main() {
 
 	log.Println()
 	// Load Certificates
-	err = file.LoadCertificates(*configID)
+	err = certs.LoadCertificates(*configID)
 	if err != nil {
 		log.Fatal(err)
 	}

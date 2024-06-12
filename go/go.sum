@@ -1,3 +1,7 @@
+github.com/caelisco/http-client v0.0.0-20240603024320-87529bec125a h1:fH+i85HxJzBCml0iF2C6sdoVVtfU3ftf4Kzyn3a7ECI=
+github.com/caelisco/http-client v0.0.0-20240603024320-87529bec125a/go.mod h1:p/dxRuHYezKJzCczm++98KVFfovAXV1JP8Y6HLaLch0=
+github.com/google/uuid v1.6.0 h1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=
+github.com/google/uuid v1.6.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
 github.com/intergreatme/selfsign v0.0.0-20240611130003-6d3443aca7c7 h1:zPniN4PXjw8W6MwAIBPN2OLhhKjwMOSU/twSbgs/VKU=
 github.com/intergreatme/selfsign v0.0.0-20240611130003-6d3443aca7c7/go.mod h1:6jU2PO/5hMAebCSFwAld4KQx+mGZh+YljpOuY9AyLCQ=
 github.com/intergreatme/selfsign v0.0.0-20240611183924-53adfbfbdf36 h1:YwtHJyqlWdSCLmOr3aDyisD8bZfVxVxaAXX/6YKem/Y=

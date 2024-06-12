@@ -31,7 +31,7 @@ func SetupTable(db *sql.DB) {
 }
 
 // StartDB checks if the database file exists and creates it if it does not.
-func SetupConnection(dbFile string) (*sql.DB, error) {
+func Connection(dbFile string) (*sql.DB, error) {
 	// Check if the database file exists and create it if it does not
 	_, err := os.Stat(dbFile)
 	if os.IsNotExist(err) {
