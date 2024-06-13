@@ -11,9 +11,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/intergreatme/certcrypto"
 	"github.com/intergreatme/remote-kyc-util/allowlist"
 	"github.com/intergreatme/remote-kyc-util/request"
-	"github.com/intergreatme/selfsign"
 )
 
 func (h *Handler) AllowlistHandler(w http.ResponseWriter, r *http.Request) {
@@ -34,23 +34,30 @@ func (h *Handler) AllowlistHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Serialize the payload to JSON
-	payloadJSON, err := json.Marshal(a)
+	timestamp := time.Now().Unix()
+
+	// Create the request payload with the timestamp
+	requestPayload := request.RequestPayload{
+		Payload:   a,
+		Timestamp: timestamp,
+	}
+
+	// Serialize the request payload to JSON for signing
+	payloadJSON, err := requestPayload.ToSignableBytes()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	keyFile := filepath.Join("keys", "key.pem")
-
-	privateKey, err := selfsign.LoadPrivateKey(keyFile, h.Config.PvtKeyPassword)
+	pfxFile := filepath.Join("keys", "cert.pfx")
+	privateKey, cert, err := certcrypto.ReadPKCS12(pfxFile, h.Config.PvtKeyPassword)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	// Sign the serialized payload
-	signature, err := selfsign.SignData(privateKey, payloadJSON)
+	signature, err := certcrypto.SignData(privateKey, payloadJSON)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -58,34 +65,27 @@ func (h *Handler) AllowlistHandler(w http.ResponseWriter, r *http.Request) {
 
 	requestBody := request.RequestPayload{
 		Payload:   a,
-		Timestamp: time.Now().Unix(),
+		Timestamp: timestamp,
 		Signature: signature,
 	}
 
 	// Make the POST request to the Allowlist API
 	respOK, respErr, err := request.AllowlistAPI(requestBody, h.Config.ID)
 	if err != nil {
-		http.Error(w, "API call failed", http.StatusInternalServerError)
+		http.Error(w, "API call failed, "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	log.Println(respErr)
 
 	if !respOK.IsEmpty() {
-		cert, err := selfsign.LoadPEMCertificate("/keys/igm_certs.pem")
-		if err != nil {
-			http.Error(w, "Unable to load certificate", http.StatusInternalServerError)
-			return
-		}
-
 		// Convert the payload to JSON bytes
-		payloadBytes, err := respOK.Payload.ToJSONBytes()
+		signedBytes, err := respOK.ToSignableBytes()
 		if err != nil {
 			http.Error(w, "Unable to convert payload to JSON bytes", http.StatusInternalServerError)
 			return
 		}
 
 		// Handle and verify the API response
-		err = selfsign.VerifySignature(cert.PublicKey.(*rsa.PublicKey), payloadBytes, []byte(respOK.Signature))
+		err = certcrypto.VerifySignature(cert.PublicKey.(*rsa.PublicKey), signedBytes, []byte(respOK.Signature))
 		if err != nil {
 			http.Error(w, "Unable to verify signature", http.StatusInternalServerError)
 			return
@@ -103,7 +103,6 @@ func (h *Handler) AllowlistHandler(w http.ResponseWriter, r *http.Request) {
 		log.Println("Ok Response stored in db.")
 	}
 	if !respErr.IsEmpty() {
-
 		// Store the ERROR response in the database
 		sql := `INSERT INTO transactions 
 	(origin_tx_id, tx_id, order_number, company, config_id, payload, response, errors) 

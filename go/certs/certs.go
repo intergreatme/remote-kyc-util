@@ -7,7 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/intergreatme/selfsign"
+	"github.com/intergreatme/certcrypto"
 )
 
 func CheckDirectory(dir string) error {
@@ -28,30 +28,30 @@ func FetchCertificates(configID string) error {
 	}
 
 	certFile := filepath.Join(keysDir, "igm_certs.pem")
-	keyFile := filepath.Join(keysDir, "key.pem")
+	pfxFile := filepath.Join(keysDir, "cert.pfx")
 
 	// Check if the igm_certs.pfx file exists
 	if _, err := os.Stat(certFile); os.IsNotExist(err) {
 		// Download certificate if it does not exist
 		uri := fmt.Sprintf("https://dev.intergreatme.com/kyc/za/api/integration/signkey/%v", configID)
-		err = selfsign.DownloadAndExtractCert(uri, keysDir, "igm_certs.pem")
+		err = certcrypto.DownloadCert(uri, certFile)
 		if err != nil {
-			return fmt.Errorf("could not download key from IGM: %v", err)
+			return fmt.Errorf("could not download certificate from IGM: %v", err)
 		}
 		log.Printf("Certificate downloaded and saved to %s\n", certFile)
 	} else if err != nil {
-		return fmt.Errorf("could not check cert file: %v", err)
+		return fmt.Errorf("could not check certificate file: %v", err)
 	} else {
 		log.Printf("Certificate already exists at %s\n", certFile)
 	}
 
-	// Check if the key.pem file exists
-	if _, err := os.Stat(keyFile); os.IsNotExist(err) {
-		log.Printf("Warning: key.pem file not found in %s. It needs to be added manually.\n", keysDir)
+	// Check if the certs.pfx file exists
+	if _, err := os.Stat(pfxFile); os.IsNotExist(err) {
+		log.Fatalf("Error: certs.pfx file not found in %s. It needs to be added manually.\n", keysDir)
 	} else if err != nil {
-		return fmt.Errorf("could not check key file: %v", err)
+		return fmt.Errorf("could not check certs.pfx file: %v", err)
 	} else {
-		log.Printf("Key file already exists at %s\n", keyFile)
+		log.Printf("certs.pfx file already exists at %s\n", pfxFile)
 	}
 
 	return nil

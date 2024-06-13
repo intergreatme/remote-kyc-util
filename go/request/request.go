@@ -20,6 +20,21 @@ type RequestPayload struct {
 	Signature []byte              `json:"signature"`
 }
 
+// ToSignableBytes converts the RequestPayload to JSON bytes excluding the Signature field
+func (r *RequestPayload) ToSignableBytes() ([]byte, error) {
+	type requestPayloadForSign struct {
+		Payload   allowlist.Allowlist `json:"payload"`
+		Timestamp int64               `json:"timestamp"`
+	}
+
+	request := requestPayloadForSign{
+		Payload:   r.Payload,
+		Timestamp: r.Timestamp,
+	}
+
+	return json.Marshal(request)
+}
+
 // ToJSON serializes the RequestPayload struct to JSON
 func (r RequestPayload) ToJSON() ([]byte, error) {
 	return json.Marshal(r)
@@ -31,7 +46,6 @@ func (r *RequestPayload) FromJSON(data []byte) error {
 }
 
 func AllowlistAPI(rp RequestPayload, configID string) (response.APIResponse, response.ErrorResponse, error) {
-
 	b, err := rp.ToJSON()
 	if err != nil {
 		return response.APIResponse{}, response.ErrorResponse{}, err
