@@ -1,17 +1,17 @@
 package routes
 
 import (
-	"github.com/gorilla/mux"
+	"net/http"
 
 	"github.com/intergreatme/remote-kyc-util/handlers"
 )
 
-func Router(handler *handlers.Handler) *mux.Router {
-	router := mux.NewRouter()
+func Router(handler *handlers.Handler) *http.ServeMux {
+	mux := http.NewServeMux()
 
-	router.HandleFunc("/api/allowlist", handler.AllowlistHandler).Methods("POST")
-	router.HandleFunc("/api/completion", handler.CompletionHandler).Methods("POST")
-	router.HandleFunc("/api/status", handler.StatusHandler).Methods("GET")
+	mux.HandleFunc("POST /api/allowlist", handler.AllowlistHandler)
+	mux.HandleFunc("GET /api/completion", handler.CompletionHandler)
+	mux.HandleFunc("GET /api/status", handler.StatusHandler)
 
-	return router
+	return mux
 }
