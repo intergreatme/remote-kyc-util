@@ -2,19 +2,31 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/intergreatme/remote-kyc-util/certs"
 	"github.com/intergreatme/remote-kyc-util/config"
 	"github.com/intergreatme/remote-kyc-util/database"
 	"github.com/intergreatme/remote-kyc-util/handlers"
 	"github.com/intergreatme/remote-kyc-util/routes"
+
+	_ "modernc.org/sqlite"
 )
+
+func usage(str string, exit int) {
+	if str != "" {
+		fmt.Println(str)
+	}
+	fmt.Println("usage: remote-kyc-util --db=<sqlite db> --config=<id> --password=<password>")
+	os.Exit(exit)
+}
 
 func main() {
 	// Fetch flags
-	dbFile := flag.String("dbfile", "transactions.sqlite3", "SQLite3 database file")
+	dbFile := flag.String("db", "transactions.sqlite3", "SQLite3 database file")
 	configID := flag.String("config", "", "Customer config ID")
 	password := flag.String("password", "", "Private key password")
 	flag.Parse()
@@ -24,7 +36,8 @@ func main() {
 	if *configID == "" || *password == "" {
 		configFile, err := config.ReadConfigFile("config.yaml")
 		if err != nil {
-			log.Fatalf("Config ID or password not provided and could not read from config file: %v", err)
+			s := fmt.Sprintf("Config ID or password not provided and could not read from config file: %v", err)
+			usage(s, 1)
 		}
 
 		c.ID = configFile.ConfigID
@@ -35,10 +48,10 @@ func main() {
 	}
 
 	if c.ID == "" || c.PvtKeyPassword == "" {
-		log.Fatal("Config ID and password are required either as flags or in the config.yaml file.")
+		usage("Config ID and password are required either as flags or in the config.yaml file.", 1)
 	}
 
-	db, err := database.Connection(*dbFile)
+	db, err := database.Connect(*dbFile)
 	if err != nil {
 		log.Fatal(err)
 	}

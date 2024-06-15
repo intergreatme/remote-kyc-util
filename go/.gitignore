@@ -1,3 +1,6 @@
 /keys/
 /*.sqlite3
-/config.yaml
+config.yaml
+*-shm
+*-wal
+*.sqlite*

@@ -4,9 +4,8 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
-	"os"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "modernc.org/sqlite"
 )
 
 func SetupTable(db *sql.DB) {
@@ -29,27 +28,19 @@ func SetupTable(db *sql.DB) {
 	}
 }
 
-// StartDB checks if the database file exists and creates it if it does not.
-func Connection(dbFile string) (*sql.DB, error) {
-	// Check if the database file exists and create it if it does not
-	_, err := os.Stat(dbFile)
-	if os.IsNotExist(err) {
-		file, err := os.Create(dbFile)
-		if err != nil {
-			return nil, fmt.Errorf("could not create database file: %v", err)
-		}
-		file.Close()
-		log.Printf("Database file created at %s\n", dbFile)
-	} else if err != nil {
-		return nil, fmt.Errorf("could not check database file: %v", err)
-	} else {
-		log.Printf("Database file already exists at %s\n", dbFile)
-	}
-
+// Connect to a SQLite database using the write ahead log (WAL)
+func Connect(dbFile string) (*sql.DB, error) {
 	// Open the database connection
-	db, err := sql.Open("sqlite3", dbFile)
+	db, err := sql.Open("sqlite", dbFile)
 	if err != nil {
 		return nil, fmt.Errorf("could not open database: %v", err)
+	}
+
+	// Enable Write-Ahead Logging (WAL) mode
+	_, err = db.Exec("PRAGMA journal_mode=WAL;")
+	if err != nil {
+		db.Close()
+		return nil, fmt.Errorf("unable to enable WAL mode: %v", err)
 	}
 
 	log.Println("Database connected")
