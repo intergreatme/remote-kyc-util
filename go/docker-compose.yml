@@ -1,0 +1,11 @@
+version: '3.8'
+services:
+  app:
+    build: .
+    volumes:
+      - .:/app/src  # Mount the source code in a different directory
+      - ./keys:/app/keys  # Mount the keys directory
+    working_dir: /app
+    command: ["./app/main"]
+    ports:
+      - "8081:8081"  # Ensure this matches the port your application is listening on
