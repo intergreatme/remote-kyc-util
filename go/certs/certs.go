@@ -33,10 +33,10 @@ func FetchCertificates(configID string) error {
 	// Check if the igm_certs.pfx file exists
 	if _, err := os.Stat(certFile); os.IsNotExist(err) {
 		// Download certificate if it does not exist
-		uri := fmt.Sprintf("https://dev.intergreatme.com/kyc/za/api/integration/signkey/%v", configID)
+		uri := fmt.Sprintf("http://kycfe:8080/KycFrontEndServices/api/integration/signkey/%v", configID)
 		err = certcrypto.DownloadCert(uri, certFile)
 		if err != nil {
-			return fmt.Errorf("could not download certificate from IGM: %v", err)
+			return errors.New(err.Error())
 		}
 		log.Printf("Certificate downloaded and saved to %s\n", certFile)
 	} else if err != nil {

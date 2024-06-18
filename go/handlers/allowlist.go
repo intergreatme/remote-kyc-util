@@ -69,6 +69,7 @@ func (h *Handler) AllowlistHandler(w http.ResponseWriter, r *http.Request) {
 		Signature: signature,
 	}
 
+	
 	// Make the POST request to the Allowlist API
 	respOK, respErr, err := request.AllowlistAPI(requestBody, h.Config.ID)
 	if err != nil {

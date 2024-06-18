@@ -6,12 +6,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 
 	"github.com/intergreatme/remote-kyc-util/allowlist"
 	"github.com/intergreatme/remote-kyc-util/response"
-
-	client "github.com/caelisco/http-client"
 )
 
 type RequestPayload struct {
@@ -63,17 +62,17 @@ func AllowlistAPI(rp RequestPayload, configID string) (response.APIResponse, res
 	// Convert the buffer's content to a byte slice
 	compressedData := buf.Bytes()
 
-	var opt client.RequestOptions
-	opt.AddHeader("Content-Type", "application/json")
-	opt.AddHeader("Content-Encoding", "gzip")
-
-	resp, err := client.Post("https://dev.intergreatme.com/kyc/za/api/integration/v2/allowlist/"+configID, compressedData, opt)
+	// Prepare the HTTP request
+	url := "http://kycfe:8080/KycFrontEndServices/api/integration/v2/allowlist/d76f8a8c-1fe7-444e-9503-91a4f5d8451f"
+	// Make the HTTP POST request
+	resp, err := http.Post(url, "application/json", bytes.NewBuffer(compressedData))
 	if err != nil {
 		return response.APIResponse{}, response.ErrorResponse{}, fmt.Errorf("failed to make API call: %v", err)
 	}
-
+	defer resp.Body.Close()
+	log.Println("req: ", resp)
 	// Read the response body
-	respBody, err := io.ReadAll(&resp.Body)
+	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return response.APIResponse{}, response.ErrorResponse{}, err
 	}
