@@ -2,31 +2,40 @@ package handlers
 
 import (
 	"crypto/rsa"
-	"encoding/json"
-	"fmt"
 	"log"
-	"math/rand"
 	"net/http"
 	"path/filepath"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/intergreatme/certcrypto"
 	"github.com/intergreatme/remote-kyc-util/allowlist"
 	"github.com/intergreatme/remote-kyc-util/request"
 )
 
 func (h *Handler) AllowlistHandler(w http.ResponseWriter, r *http.Request) {
-	// Fetch and validate the request body
-	var a allowlist.Allowlist
-	if err := json.NewDecoder(r.Body).Decode(&a); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+	// Parse form data
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "Failed to parse form", http.StatusBadRequest)
 		return
 	}
-
-	// Generate a new origin_tx_id and order number
-	a.OriginTxID = uuid.New().String()
-	a.OrderNumber = fmt.Sprintf("%d%04d", time.Now().Unix(), rand.Intn(10000))
+	// TODO tried to look for a different one liner to simplify this but unsuccessful. Gorilla/schema was an example but it does not work.
+	a := allowlist.Allowlist{
+		OriginTxID:      r.FormValue("origin_tx_id"),
+		OrderNumber:     r.FormValue("order_number"),
+		FirstName:       r.FormValue("first_name"),
+		LastName:        r.FormValue("last_name"),
+		Mobile:          r.FormValue("mobile"),
+		Email:           r.FormValue("email"),
+		IDNumber:        r.FormValue("id_number"),
+		PassportNumber:  r.FormValue("passport_number"),
+		PassportCountry: r.FormValue("passport_country"),
+		BuildingComplex: r.FormValue("building_complex"),
+		Line1:           r.FormValue("line1"),
+		Line2:           r.FormValue("line2"),
+		Province:        r.FormValue("province"),
+		PostCode:        r.FormValue("post_code"),
+		Country:         r.FormValue("country"),
+	}
 
 	// Validate mandatory fields (add validation logic here)
 	if err := a.Validate(); err != nil {
@@ -36,9 +45,15 @@ func (h *Handler) AllowlistHandler(w http.ResponseWriter, r *http.Request) {
 
 	timestamp := time.Now().Unix()
 
+	b, err := a.ToJSON()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	// Create the request payload with the timestamp
 	requestPayload := request.RequestPayload{
-		Payload:   a,
+		Payload:   string(b),
 		Timestamp: timestamp,
 	}
 
@@ -64,18 +79,26 @@ func (h *Handler) AllowlistHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	requestBody := request.RequestPayload{
-		Payload:   a,
+		Payload:   string(b),
 		Timestamp: timestamp,
 		Signature: signature,
 	}
 
-	
 	// Make the POST request to the Allowlist API
 	respOK, respErr, err := request.AllowlistAPI(requestBody, h.Config.ID)
 	if err != nil {
 		http.Error(w, "API call failed, "+err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	// Make the POST request to the Allowlist API
+	respOK, respErr, err = request.AllowlistAPI(requestBody, h.Config.ID)
+	if err != nil {
+		http.Error(w, "API call failed: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	var result string
 
 	if !respOK.IsEmpty() {
 		// Convert the payload to JSON bytes
@@ -94,31 +117,38 @@ func (h *Handler) AllowlistHandler(w http.ResponseWriter, r *http.Request) {
 
 		// Store the OK response in the database
 		sql := `INSERT INTO transactions 
-		(origin_tx_id, tx_id, order_number, company, config_id, payload, response) 
-		VALUES (?, ?, ?, ?, ?, ?, ?)`
+        (origin_tx_id, tx_id, order_number, company, config_id, payload, response) 
+        VALUES (?, ?, ?, ?, ?, ?, ?)`
 		_, err = h.DB.Exec(sql, respOK.Payload.Data.OriginTxID, respOK.Payload.Data.TxID, a.OrderNumber, "IGM-Test", h.Config.ID, payloadJSON, respOK)
 		if err != nil {
 			http.Error(w, "Unable to insert new record into transaction table", http.StatusInternalServerError)
 			return
 		}
 		log.Println("Ok Response stored in db.")
+
+		rb, _ := respOK.ToJSON()
+		result = string(rb)
 	}
+
 	if !respErr.IsEmpty() {
 		// Store the ERROR response in the database
 		sql := `INSERT INTO transactions 
-	(origin_tx_id, tx_id, order_number, company, config_id, payload, response, errors) 
-	VALUES (?, ?, ?, ?, ?, ?, ?)`
-		_, err = h.DB.Exec(sql, respOK.Payload.Data.OriginTxID, respOK.Payload.Data.TxID, a.OrderNumber, "IGM-Test", h.Config.ID, payloadJSON, respErr, respErr.Errors)
+        (origin_tx_id, tx_id, order_number, company, config_id, payload, response, errors) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+		_, err = h.DB.Exec(sql, a.OriginTxID, nil, a.OrderNumber, "IGM-Test", h.Config.ID, payloadJSON, respErr, respErr.Errors)
 		if err != nil {
 			http.Error(w, "Unable to insert new record into transaction table", http.StatusInternalServerError)
 			return
 		}
 		log.Println("Error Response stored in db.")
 
+		re, _ := respErr.MarshalJSON()
+		result = string(re)
 	}
+
 	// Respond with the API response
 	w.Header().Set("Content-Type", "application/json")
-	w.Write([]byte("OK"))
+	w.Write([]byte(result))
 }
 
 // Check if request is a POST else return method not allowed

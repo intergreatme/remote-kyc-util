@@ -8,24 +8,21 @@ import (
 )
 
 type Allowlist struct {
-	OriginTxID      string  `json:"origin_tx_id"`               // The caller's transaction ID - required
-	OrderNumber     string  `json:"order_number,omitempty"`     // The caller's order number if any (optional)
-	FirstName       string  `json:"first_name"`                 // Required
-	LastName        string  `json:"last_name"`                  // Required
-	Mobile          string  `json:"mobile"`                     // Contactable mobile number
-	Email           string  `json:"email"`                      // Contactable email address
-	IDNumber        string  `json:"id_number,omitempty"`        // ID number (mutually exclusive with passport_number)
-	PassportNumber  string  `json:"passport_number,omitempty"`  // Passport number (mutually exclusive with id_number)
-	PassportCountry string  `json:"passport_country,omitempty"` // Mandatory if passport_number defined
-	BuildingComplex string  `json:"building_complex,omitempty"` // Optional
-	Line1           string  `json:"line1"`                      // Required
-	Line2           string  `json:"line2,omitempty"`            // Optional
-	Province        string  `json:"province"`                   // Required
-	PostCode        string  `json:"post_code"`                  // Required
-	Country         string  `json:"country"`                    // Required
-	Latitude        float64 `json:"latitude,omitempty"`         // Optional
-	Longitude       float64 `json:"longitude,omitempty"`        // Optional
-	PlusCode        string  `json:"plus_code,omitempty"`        // Optional
+	OriginTxID      string `json:"origin_tx_id"`               // The caller's transaction ID - required
+	OrderNumber     string `json:"order_number,omitempty"`     // The caller's order number if any (optional)
+	FirstName       string `json:"first_name"`                 // Required
+	LastName        string `json:"last_name"`                  // Required
+	Mobile          string `json:"mobile"`                     // Contactable mobile number
+	Email           string `json:"email"`                      // Contactable email address
+	IDNumber        string `json:"id_number,omitempty"`        // ID number (mutually exclusive with passport_number)
+	PassportNumber  string `json:"passport_number,omitempty"`  // Passport number (mutually exclusive with id_number)
+	PassportCountry string `json:"passport_country,omitempty"` // Mandatory if passport_number defined
+	BuildingComplex string `json:"building_complex,omitempty"` // Optional
+	Line1           string `json:"line1"`                      // Required
+	Line2           string `json:"line2,omitempty"`            // Optional
+	Province        string `json:"province"`                   // Required
+	PostCode        string `json:"post_code"`                  // Required
+	Country         string `json:"country"`                    // Required
 }
 
 func (a Allowlist) ToJSON() ([]byte, error) {

@@ -71,8 +71,8 @@ func main() {
 		log.Fatal(err)
 	}
 
-	log.Println("Starting server on :8081")
-	if err := http.ListenAndServe(":8081", router); err != nil {
+	log.Println("Starting server on :8200")
+	if err := http.ListenAndServe(":8200", router); err != nil {
 		log.Fatalf("could not start server: %s\n", err)
 	}
 }

@@ -9,26 +9,25 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/intergreatme/remote-kyc-util/allowlist"
 	"github.com/intergreatme/remote-kyc-util/response"
 )
 
 type RequestPayload struct {
-	Payload   allowlist.Allowlist `json:"payload"`
-	Timestamp int64               `json:"timestamp"`
-	Signature []byte              `json:"signature"`
+	Payload   string `json:"payload"`
+	Timestamp int64  `json:"timestamp"`
+	Signature []byte `json:"signature"`
 }
 
 // ToSignableBytes converts the RequestPayload to JSON bytes excluding the Signature field
 func (r *RequestPayload) ToSignableBytes() ([]byte, error) {
 	type requestPayloadForSign struct {
-		Payload   allowlist.Allowlist `json:"payload"`
-		Timestamp int64               `json:"timestamp"`
+		Payload   string `json:"payload"`
+		Timestamp string `json:"timestamp"`
 	}
 
 	request := requestPayloadForSign{
 		Payload:   r.Payload,
-		Timestamp: r.Timestamp,
+		Timestamp: fmt.Sprintf("%d", r.Timestamp),
 	}
 
 	return json.Marshal(request)
@@ -52,26 +51,38 @@ func AllowlistAPI(rp RequestPayload, configID string) (response.APIResponse, res
 
 	// Compress the JSON payload with gzip
 	var buf bytes.Buffer
-	gzipWriter := gzip.NewWriter(&buf)
-	_, err = gzipWriter.Write(b)
-	if err != nil {
-		return response.APIResponse{}, response.ErrorResponse{}, err
+	gz := gzip.NewWriter(&buf)
+	if _, err := gz.Write([]byte(b)); err != nil {
+		log.Fatalf("failed to compress data: %v", err)
 	}
-	gzipWriter.Close()
+	if err := gz.Close(); err != nil {
+		log.Fatalf("failed to close gzip writer: %v", err)
+	}
 
-	// Convert the buffer's content to a byte slice
-	compressedData := buf.Bytes()
+	url := "http://kycfe:8080/KycFrontEndServices/api/integration/v2/allowlist/" + configID
 
-	// Prepare the HTTP request
-	url := "http://kycfe:8080/KycFrontEndServices/api/integration/v2/allowlist/d76f8a8c-1fe7-444e-9503-91a4f5d8451f"
-	// Make the HTTP POST request
-	resp, err := http.Post(url, "application/json", bytes.NewBuffer(compressedData))
+	// Print JSON data for debugging
+	fmt.Println("JSON Data:", string(b))
+
+	// Create the HTTP POST request using http.Client
+	client := &http.Client{}
+	req, err := http.NewRequest("POST", url, &buf)
 	if err != nil {
-		return response.APIResponse{}, response.ErrorResponse{}, fmt.Errorf("failed to make API call: %v", err)
+		log.Fatalf("failed to create request: %v", err)
+	}
+
+	// Set the required headers
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Content-Encoding", "gzip")
+
+	// Make the HTTP POST request
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Fatalf("failed to make API call: %v", err)
 	}
 	defer resp.Body.Close()
-	log.Println("req: ", resp)
-	// Read the response body
+	log.Println(resp)
+
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return response.APIResponse{}, response.ErrorResponse{}, err
