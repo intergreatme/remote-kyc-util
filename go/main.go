@@ -1,11 +1,9 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 
 	"github.com/intergreatme/remote-kyc-util/certs"
 	"github.com/intergreatme/remote-kyc-util/config"
@@ -16,62 +14,74 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-func usage(str string, exit int) {
-	if str != "" {
-		fmt.Println(str)
+// getConfig provides an input-driven approach to configuring the application at start-up
+func getConfig() config.Configuration {
+	var cnf config.Configuration
+
+	cnf, err := config.Read()
+	// if we can read the config file, we can assume everything is fine and do not need to prompt
+	// the user to add in the required information.
+	if err == nil {
+		return cnf
 	}
-	fmt.Println("usage: remote-kyc-util --db=<sqlite db> --config=<id> --password=<password>")
-	os.Exit(exit)
+	var input string
+	fmt.Println("Config file not found, running interactively")
+
+	fmt.Print("Company config ID: ")
+	fmt.Scan(&input)
+	cnf.CompanyID = input
+
+	fmt.Print("URL to connect to: ")
+	fmt.Scan(&input)
+	cnf.URL = input
+
+	fmt.Print("PFX filename: ")
+	fmt.Scan(&input)
+	cnf.PFXFilename = input
+
+	fmt.Print("x509 Password: ")
+	fmt.Scan(&input)
+	cnf.Password = input
+
+	cnf.CertDir = ".certs"
+	fmt.Println("Please add your PFX files to the hidden directory .certs")
+
+	err = cnf.Write()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return cnf
 }
 
+const dbFile = "transactions.sqlite3"
+
 func main() {
-	// Fetch flags
-	dbFile := flag.String("db", "transactions.sqlite3", "SQLite3 database file")
-	configID := flag.String("config", "", "Customer config ID")
-	password := flag.String("password", "", "Private key password")
-	flag.Parse()
+	cnf := getConfig()
 
-	c := handlers.Config{}
-
-	if *configID == "" || *password == "" {
-		configFile, err := config.ReadConfigFile("config.yaml")
-		if err != nil {
-			s := fmt.Sprintf("Config ID or password not provided and could not read from config file: %v", err)
-			usage(s, 1)
-		}
-
-		c.ID = configFile.ConfigID
-		c.PvtKeyPassword = configFile.Password
-	} else {
-		c.ID = *configID
-		c.PvtKeyPassword = *password
-	}
-
-	if c.ID == "" || c.PvtKeyPassword == "" {
-		usage("Config ID and password are required either as flags or in the config.yaml file.", 1)
-	}
-
-	db, err := database.Connect(*dbFile)
+	db, err := database.Connect(dbFile)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer db.Close()
 
 	// Create transactions table if it does not exists
-	database.SetupTable(db)
+	database.CreateTables(db)
 
-	handler := handlers.NewHandler(db, c)
-
-	// Set up routes and start server
-	router := routes.Router(handler)
-
-	// Check if IGM certificate already exist or download if not. Also verify that a private key of your own signature is present
-	err = certs.FetchCertificates(handler.Config.ID)
+	// Check if IGM certificate already exist or download if not.
+	// Also verify that a private key of your own signature is present
+	// If it does not exist, fail.
+	err = certs.FetchCertificates(cnf)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	log.Println("Starting server on :8200")
+	handler := handlers.NewHandler(db, cnf)
+
+	// Set up routes and start server
+	router := routes.Router(handler)
+
+	log.Println("Starting server on http://localhost:8200/")
 	if err := http.ListenAndServe(":8200", router); err != nil {
 		log.Fatalf("could not start server: %s\n", err)
 	}

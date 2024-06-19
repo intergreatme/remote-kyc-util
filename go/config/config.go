@@ -6,13 +6,18 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-type ConfigFile struct {
-	Password string `yaml:"password"`
-	ConfigID string `yaml:"config_id"`
+const filename = "config.yaml"
+
+type Configuration struct {
+	CompanyID   string `yaml:"company_id"`
+	PFXFilename string `yaml:"pfx"`
+	Password    string `yaml:"password"`
+	URL         string `yaml:"url"`
+	CertDir     string `yaml:"cert_dir"`
 }
 
-func ReadConfigFile(filename string) (ConfigFile, error) {
-	var config ConfigFile
+func Read() (Configuration, error) {
+	var config Configuration
 
 	data, err := os.ReadFile(filename)
 	if err != nil {
@@ -25,4 +30,16 @@ func ReadConfigFile(filename string) (ConfigFile, error) {
 	}
 
 	return config, nil
+}
+
+func (cnf *Configuration) Write() error {
+	out, err := yaml.Marshal(cnf)
+	if err != nil {
+		return err
+	}
+	err = os.WriteFile(filename, out, 0664)
+	if err != nil {
+		return err
+	}
+	return nil
 }

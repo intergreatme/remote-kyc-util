@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/intergreatme/certcrypto"
+	"github.com/intergreatme/remote-kyc-util/config"
 )
 
 func CheckDirectory(dir string) error {
@@ -18,22 +19,20 @@ func CheckDirectory(dir string) error {
 	return nil
 }
 
-func FetchCertificates(configID string) error {
-	keysDir := "keys"
-
+func FetchCertificates(cnf config.Configuration) error {
 	// Check keys directory exists
-	err := CheckDirectory(keysDir)
+	err := CheckDirectory(cnf.CertDir)
 	if err != nil {
 		return err
 	}
 
-	certFile := filepath.Join(keysDir, "igm_certs.pem")
-	pfxFile := filepath.Join(keysDir, "cert.pfx")
+	certFile := filepath.Join(cnf.CertDir, cnf.CompanyID+".pem")
+	pfxFile := filepath.Join(cnf.CertDir, cnf.PFXFilename)
 
 	// Check if the igm_certs.pfx file exists
 	if _, err := os.Stat(certFile); os.IsNotExist(err) {
 		// Download certificate if it does not exist
-		uri := fmt.Sprintf("http://kycfe:8080/KycFrontEndServices/api/integration/signkey/%v", configID)
+		uri := fmt.Sprintf("%s/signkey/%s", cnf.URL, cnf.CompanyID)
 		err = certcrypto.DownloadCert(uri, certFile)
 		if err != nil {
 			return errors.New(err.Error())
@@ -41,17 +40,13 @@ func FetchCertificates(configID string) error {
 		log.Printf("Certificate downloaded and saved to %s\n", certFile)
 	} else if err != nil {
 		return fmt.Errorf("could not check certificate file: %v", err)
-	} else {
-		log.Printf("Certificate already exists at %s\n", certFile)
 	}
 
 	// Check if the certs.pfx file exists
 	if _, err := os.Stat(pfxFile); os.IsNotExist(err) {
-		log.Fatalf("Error: certs.pfx file not found in %s. It needs to be added manually.\n", keysDir)
+		log.Fatalf("Error: %s file not found. It needs to be added manually.\n", pfxFile)
 	} else if err != nil {
-		return fmt.Errorf("could not check certs.pfx file: %v", err)
-	} else {
-		log.Printf("certs.pfx file already exists at %s\n", pfxFile)
+		return fmt.Errorf("could not check %s file: %v", cnf.PFXFilename, err)
 	}
 
 	return nil

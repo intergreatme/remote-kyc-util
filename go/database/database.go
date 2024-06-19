@@ -8,26 +8,6 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-func SetupTable(db *sql.DB) {
-	createTableSQL := `CREATE TABLE IF NOT EXISTS TRANSACTIONS (
-        id INTEGER PRIMARY KEY,
-        origin_tx_id TEXT,
-        order_number TEXT,
-        company TEXT,
-        config_id TEXT,
-        tx_id TEXT,
-        payload TEXT,
-        response TEXT,
-        errors TEXT,
-        tx_status TEXT,
-        time DATETIME DEFAULT CURRENT_TIMESTAMP
-    );`
-
-	if _, err := db.Exec(createTableSQL); err != nil {
-		log.Fatalf("could not create transactions table: %s\n", err)
-	}
-}
-
 // Connect to a SQLite database using the write ahead log (WAL)
 func Connect(dbFile string) (*sql.DB, error) {
 	// Open the database connection
@@ -45,4 +25,24 @@ func Connect(dbFile string) (*sql.DB, error) {
 
 	log.Println("Database connected")
 	return db, nil
+}
+
+func CreateTables(db *sql.DB) {
+	createTableSQL := `CREATE TABLE IF NOT EXISTS TRANSACTIONS (
+        id INTEGER PRIMARY KEY,
+        origin_tx_id TEXT,
+        order_number TEXT,
+        company TEXT,
+        config_id TEXT,
+        tx_id TEXT,
+        payload TEXT,
+        response TEXT,
+        errors TEXT,
+        tx_status TEXT,
+        time DATETIME DEFAULT CURRENT_TIMESTAMP
+    );`
+
+	if _, err := db.Exec(createTableSQL); err != nil {
+		log.Fatalf("could not create transactions table: %s\n", err)
+	}
 }

@@ -4,3 +4,5 @@ config.yaml
 *-shm
 *-wal
 *.sqlite*
+.certs
+/tmp/

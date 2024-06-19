@@ -2,6 +2,8 @@ package handlers
 
 import (
 	"crypto/rsa"
+	"encoding/base64"
+	"fmt"
 	"log"
 	"net/http"
 	"path/filepath"
@@ -43,6 +45,7 @@ func (h *Handler) AllowlistHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// NB: Timestamp modification required
 	timestamp := time.Now().Unix()
 
 	b, err := a.ToJSON()
@@ -51,50 +54,33 @@ func (h *Handler) AllowlistHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Create the request payload with the timestamp
-	requestPayload := request.RequestPayload{
-		Payload:   string(b),
-		Timestamp: timestamp,
-	}
-
-	// Serialize the request payload to JSON for signing
-	payloadJSON, err := requestPayload.ToSignableBytes()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	pfxFile := filepath.Join("keys", "cert.pfx")
-	privateKey, cert, err := certcrypto.ReadPKCS12(pfxFile, h.Config.PvtKeyPassword)
+	pfxFile := filepath.Join(h.Config.CertDir, h.Config.PFXFilename)
+	privateKey, cert, err := certcrypto.ReadPKCS12(pfxFile, h.Config.Password)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	// Sign the serialized payload
-	signature, err := certcrypto.SignData(privateKey, payloadJSON)
+	datasign := string(b) + fmt.Sprintf("%d", timestamp)
+
+	signature, err := certcrypto.SignData(privateKey, []byte(datasign))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	requestBody := request.RequestPayload{
+	sig := base64.StdEncoding.EncodeToString(signature)
+	reqBody := request.RequestPayload{
 		Payload:   string(b),
 		Timestamp: timestamp,
-		Signature: signature,
+		Signature: sig,
 	}
 
 	// Make the POST request to the Allowlist API
-	respOK, respErr, err := request.AllowlistAPI(requestBody, h.Config.ID)
+	respOK, respErr, err := request.AllowlistAPI(reqBody, h.Config)
 	if err != nil {
 		http.Error(w, "API call failed, "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// Make the POST request to the Allowlist API
-	respOK, respErr, err = request.AllowlistAPI(requestBody, h.Config.ID)
-	if err != nil {
-		http.Error(w, "API call failed: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -116,10 +102,10 @@ func (h *Handler) AllowlistHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Store the OK response in the database
-		sql := `INSERT INTO transactions 
-        (origin_tx_id, tx_id, order_number, company, config_id, payload, response) 
-        VALUES (?, ?, ?, ?, ?, ?, ?)`
-		_, err = h.DB.Exec(sql, respOK.Payload.Data.OriginTxID, respOK.Payload.Data.TxID, a.OrderNumber, "IGM-Test", h.Config.ID, payloadJSON, respOK)
+		sql := `INSERT INTO transactions
+		        (origin_tx_id, tx_id, order_number, company, config_id, payload, response)
+		        VALUES (?, ?, ?, ?, ?, ?, ?)`
+		_, err = h.DB.Exec(sql, respOK.Payload.Data.OriginTxID, respOK.Payload.Data.TxID, a.OrderNumber, "IGM-Test", h.Config.CompanyID, string(b), respOK)
 		if err != nil {
 			http.Error(w, "Unable to insert new record into transaction table", http.StatusInternalServerError)
 			return
@@ -132,10 +118,10 @@ func (h *Handler) AllowlistHandler(w http.ResponseWriter, r *http.Request) {
 
 	if !respErr.IsEmpty() {
 		// Store the ERROR response in the database
-		sql := `INSERT INTO transactions 
-        (origin_tx_id, tx_id, order_number, company, config_id, payload, response, errors) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-		_, err = h.DB.Exec(sql, a.OriginTxID, nil, a.OrderNumber, "IGM-Test", h.Config.ID, payloadJSON, respErr, respErr.Errors)
+		sql := `INSERT INTO transactions
+		        (origin_tx_id, tx_id, order_number, company, config_id, payload, response, errors)
+		        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+		_, err = h.DB.Exec(sql, a.OriginTxID, nil, a.OrderNumber, "IGM-Test", h.Config.CompanyID, string(b), respErr, respErr.Errors)
 		if err != nil {
 			http.Error(w, "Unable to insert new record into transaction table", http.StatusInternalServerError)
 			return
