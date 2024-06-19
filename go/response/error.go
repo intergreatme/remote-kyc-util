@@ -30,7 +30,7 @@ func (e ErrorResponse) IsEmpty() bool {
 }
 
 // MarshalJSON customizes the JSON encoding for ErrorResponse
-func (e ErrorResponse) MarshalJSON() ([]byte, error) {
+func (e ErrorResponse) toJSON() ([]byte, error) {
 	type Alias ErrorResponse // Create an alias to avoid recursion
 	return json.Marshal(&struct {
 		Errors map[string]string `json:"errors"`
@@ -42,7 +42,7 @@ func (e ErrorResponse) MarshalJSON() ([]byte, error) {
 }
 
 // UnmarshalJSON customizes the JSON decoding for ErrorResponse
-func (e *ErrorResponse) UnmarshalJSON(data []byte) error {
+func (e *ErrorResponse) FromJSON(data []byte) error {
 	type Alias ErrorResponse // Create an alias to avoid recursion
 	aux := &struct {
 		Errors map[string]string `json:"errors"`

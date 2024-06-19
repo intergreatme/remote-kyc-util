@@ -3,6 +3,7 @@ module github.com/intergreatme/remote-kyc-util
 go 1.22.4
 
 require (
+	github.com/caelisco/http-client v0.0.0-20240619050828-3a558d0f5ea2
 	github.com/google/uuid v1.6.0
 	github.com/intergreatme/certcrypto v0.0.0-20240613114413-5476759cb546
 	gopkg.in/yaml.v3 v3.0.1
@@ -11,7 +12,6 @@ require (
 
 require (
 	github.com/andybalholm/brotli v1.1.0 // indirect
-	github.com/caelisco/http-client v0.0.0-20240619050828-3a558d0f5ea2 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect

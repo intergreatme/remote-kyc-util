@@ -1,6 +1,7 @@
 package certs
 
 import (
+	"crypto/rsa"
 	"errors"
 	"fmt"
 	"log"
@@ -32,7 +33,7 @@ func FetchCertificates(cnf config.Configuration) error {
 	// Check if the igm_certs.pfx file exists
 	if _, err := os.Stat(certFile); os.IsNotExist(err) {
 		// Download certificate if it does not exist
-		uri := fmt.Sprintf("%s/signkey/%s", cnf.URL, cnf.CompanyID)
+		uri := fmt.Sprintf("%ssignkey/%s", cnf.URL, cnf.CompanyID)
 		err = certcrypto.DownloadCert(uri, certFile)
 		if err != nil {
 			return errors.New(err.Error())
@@ -47,6 +48,21 @@ func FetchCertificates(cnf config.Configuration) error {
 		log.Fatalf("Error: %s file not found. It needs to be added manually.\n", pfxFile)
 	} else if err != nil {
 		return fmt.Errorf("could not check %s file: %v", cnf.PFXFilename, err)
+	}
+	return nil
+}
+
+func VerifySignature(data string, signature string, cnf config.Configuration) error {
+	certFile := filepath.Join(cnf.CertDir, cnf.CompanyID+".pem")
+	cert, err := certcrypto.ReadCertFromPEM(certFile)
+	if err != nil {
+		return err
+	}
+
+	err = certcrypto.VerifySignature(cert.PublicKey.(*rsa.PublicKey), []byte(data), []byte(signature))
+	if err != nil {
+		log.Println("Error validating signature")
+		return err
 	}
 
 	return nil

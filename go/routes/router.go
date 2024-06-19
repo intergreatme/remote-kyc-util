@@ -11,8 +11,8 @@ func Router(handler *handlers.Handler) *http.ServeMux {
 
 	mux.HandleFunc("/", handler.RootHandler)
 	mux.HandleFunc("POST /api/allowlist", handler.AllowlistHandler)
-	mux.HandleFunc("GET /api/completion", handler.CompletionHandler)
-	mux.HandleFunc("GET /api/status", handler.StatusHandler)
+	mux.HandleFunc("POST /api/completion", handler.CompletionHandler)
+	mux.HandleFunc("POST /api/status", handler.StatusHandler)
 
 	return mux
 }

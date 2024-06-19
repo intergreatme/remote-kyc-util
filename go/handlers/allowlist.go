@@ -1,9 +1,9 @@
 package handlers
 
 import (
-	"crypto/rsa"
 	"encoding/base64"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"path/filepath"
@@ -11,7 +11,9 @@ import (
 
 	"github.com/intergreatme/certcrypto"
 	"github.com/intergreatme/remote-kyc-util/allowlist"
+	"github.com/intergreatme/remote-kyc-util/certs"
 	"github.com/intergreatme/remote-kyc-util/request"
+	"github.com/intergreatme/remote-kyc-util/response"
 )
 
 func (h *Handler) AllowlistHandler(w http.ResponseWriter, r *http.Request) {
@@ -20,7 +22,7 @@ func (h *Handler) AllowlistHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to parse form", http.StatusBadRequest)
 		return
 	}
-	// TODO tried to look for a different one liner to simplify this but unsuccessful. Gorilla/schema was an example but it does not work.
+
 	a := allowlist.Allowlist{
 		OriginTxID:      r.FormValue("origin_tx_id"),
 		OrderNumber:     r.FormValue("order_number"),
@@ -55,7 +57,7 @@ func (h *Handler) AllowlistHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	pfxFile := filepath.Join(h.Config.CertDir, h.Config.PFXFilename)
-	privateKey, cert, err := certcrypto.ReadPKCS12(pfxFile, h.Config.Password)
+	privateKey, _, err := certcrypto.ReadPKCS12(pfxFile, h.Config.Password)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -78,152 +80,99 @@ func (h *Handler) AllowlistHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make the POST request to the Allowlist API
-	respOK, respErr, err := request.AllowlistAPI(reqBody, h.Config)
+	resp, err := request.AllowlistAPI(reqBody, h.Config)
 	if err != nil {
 		http.Error(w, "API call failed, "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	var result string
+	payloadBody, err := io.ReadAll(&resp.Body)
+	if err != nil {
+		fmt.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	log.Printf("\n\nAPI response: %s", payloadBody)
 
-	if !respOK.IsEmpty() {
-		// Convert the payload to JSON bytes
-		signedBytes, err := respOK.ToSignableBytes()
+	// If error, fail fast.
+	if resp.StatusCode != 200 {
+		var rw response.ResponseWrapper
+		// Errors are sent with the response wrapper, which required further deserializing
+		err = rw.FromJSON(payloadBody)
 		if err != nil {
-			http.Error(w, "Unable to convert payload to JSON bytes", http.StatusInternalServerError)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+		log.Printf("\n\nPayload response: %v", rw)
 
-		// Handle and verify the API response
-		err = certcrypto.VerifySignature(cert.PublicKey.(*rsa.PublicKey), signedBytes, []byte(respOK.Signature))
-		if err != nil {
-			http.Error(w, "Unable to verify signature", http.StatusInternalServerError)
-			return
-		}
+		// Uncomment this if you want to handle specific custom error responses like status code 406.
+		// {
+		//     "valid": false,
+		//     "under_age": false,
+		//     "errors": {
+		//         “TOO_SHORT”: “The provided identity number was too short”,
+		//         “INVALID_CHARACTERS”: “The provided identity number contains non-numeric characters”
+		//     }
+		// }
+		// var respM response.ErrorResponse
+		// err = respM.FromJSON([]byte(rw.Message))
+		// if err != nil {
+		// 	http.Error(w, "Unable to unmarshal response message", http.StatusInternalServerError)
+		// 	return
+		// }
 
-		// Store the OK response in the database
 		sql := `INSERT INTO transactions
-		        (origin_tx_id, tx_id, order_number, company, config_id, payload, response)
-		        VALUES (?, ?, ?, ?, ?, ?, ?)`
-		_, err = h.DB.Exec(sql, respOK.Payload.Data.OriginTxID, respOK.Payload.Data.TxID, a.OrderNumber, "IGM-Test", h.Config.CompanyID, string(b), respOK)
+		(origin_tx_id, tx_id, order_number, company, config_id, payload, response, errors)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+		_, err = h.DB.Exec(sql, a.OriginTxID, nil, a.OrderNumber, "IGM-Test", h.Config.CompanyID, string(b), payloadBody, rw.Message)
 		if err != nil {
 			http.Error(w, "Unable to insert new record into transaction table", http.StatusInternalServerError)
 			return
 		}
-		log.Println("Ok Response stored in db.")
-
-		rb, _ := respOK.ToJSON()
-		result = string(rb)
+		log.Printf("Error response stored in DB, error received: %d - %s", rw.Code, rw.Message)
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(payloadBody))
+		return
 	}
 
-	if !respErr.IsEmpty() {
-		// Store the ERROR response in the database
-		sql := `INSERT INTO transactions
-		        (origin_tx_id, tx_id, order_number, company, config_id, payload, response, errors)
-		        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-		_, err = h.DB.Exec(sql, a.OriginTxID, nil, a.OrderNumber, "IGM-Test", h.Config.CompanyID, string(b), respErr, respErr.Errors)
-		if err != nil {
-			http.Error(w, "Unable to insert new record into transaction table", http.StatusInternalServerError)
-			return
-		}
-		log.Println("Error Response stored in db.")
-
-		re, _ := respErr.MarshalJSON()
-		result = string(re)
+	// Happy route, new transaction created.
+	var respOK response.APIResponse
+	err = respOK.FromJSON(payloadBody)
+	if err != nil {
+		http.Error(w, "Failed to marshal response, "+err.Error(), http.StatusInternalServerError)
+		return
 	}
+
+	dataSigned := string(respOK.Payload) + fmt.Sprintf("%d", respOK.Timestamp)
+
+	// Signature is base64 encoded, decode in order to verify.
+	sigD, _ := base64.StdEncoding.DecodeString(respOK.Signature)
+	err = certs.VerifySignature(dataSigned, string(sigD), h.Config)
+	if err != nil {
+		http.Error(w, "Unable to verify signature", http.StatusInternalServerError)
+		return
+	}
+
+	// Fetch TX ID from body
+	var pd response.PayloadData
+	err = pd.FromJSON([]byte(respOK.Payload))
+	if err != nil {
+		http.Error(w, "Unable to unmarshal response payload", http.StatusInternalServerError)
+		return
+	}
+
+	log.Printf("OriginTxID: %s, TxID: %s", pd.OriginTxID, pd.TxID)
+	sql := `INSERT INTO transactions
+			(origin_tx_id, tx_id, order_number, company, config_id, payload, response)
+			VALUES (?, ?, ?, ?, ?, ?, ?)`
+	_, err = h.DB.Exec(sql, pd.OriginTxID, pd.TxID, a.OrderNumber, "IGM-Test", h.Config.CompanyID, string(b), string(payloadBody))
+	if err != nil {
+		http.Error(w, "Unable to insert new record into transaction table", http.StatusInternalServerError)
+		return
+	}
+	log.Printf("Ok Response stored in db, for Origin TX ID: %s and TxID: %s", pd.OriginTxID, pd.TxID)
 
 	// Respond with the API response
 	w.Header().Set("Content-Type", "application/json")
-	w.Write([]byte(result))
+	w.Write([]byte(payloadBody))
 }
-
-// Check if request is a POST else return method not allowed
-// Fetch body
-// Body should contain the allowlist JSON Schema
-// With madatory fields required firstname, lastname, id number or passport number if foreign, then contact number and address (address is kinda optional)
-
-// {
-// 	origin_tx_id                         the callers transaction id - required
-// 	order_number                         the callers order number if any (optional)
-
-// 	first_name
-// 	last_name
-// 	mobile                               contactable mobile number
-// 	email                                contactable email address
-
-// 	id_number                            id_number & passport_number are mutually exclusive
-// 	passport_number
-// 	passport_country                     mandatory if passport_number defined
-
-// 	building_complex
-// 	line1
-// 	line2
-// 	province
-// 	post_code
-// 	country
-// 	latitude
-// 	longitude
-// 	plus_code                            https://plus.codes/
-// }
-
-// after validating the necessary fields, start constructing the actual body to hit the Allowlist API for integration
-// sign the payload with private key extracted from the certificate provided (use the selfsign package)
-// It will be a POST, the content-encoding must be gzip
-// Content-type is application/json
-// Construct the body:
-// Generic API JSON Schema with:
-// 	payload: Allowlist JSON Schema
-// 	timestamp: the UTC milliseconds since the epoch.
-// 	signature: Base64 RSA Signed SHA512 of payload + timestamp
-
-// Do the call. URI i'll provide myself.
-
-// an example payload would be:
-// 	{
-// 	"payload":
-// 		"{\"origin_tx_id\":\"YOUR_UUID\",\"first_name\":\"Joe\",\"last_name\":\"Soap\",
-// 		\"id_number\":\"8301015468183\",\"contact_number\":\"0825555001\",\"mobile\":\"0825555001\",\"order_number\":\"00001\",
-// 		\"building_complex\":\"Unit 3 Melrose Arch\",\"line1\":\"72 4th Avenue\",\"line2\":\"\",
-// 		\"province\":\"Gauteng\",\"post_code\":\"2196\",\"country\":\"South Africa\",
-// 		\"latitude\":\"-26.1024693\",\"longitude\":\"28.058389\",\"plus_code\":\"V3J3+9F Sandton\",
-// 	"timestamp": 1551767491,
-// 	"signature":
-// 		"MmFiMGQzNWY0ZDI4YzdmZWE0NmU1M2FkNWJhZmFhYzAxOWY0ZmEwYTgzZDc3ZjFkMmFjNjYxYzM3Y
-// 		mViOWJlNjUyZGI4YTFkY2IwM2ViM2MzMmJmMmQyNmIzMWNmYzQ4OTA0YzQ4Y2I0Y2I0MTA1NmIy
-// 		NjdlYjlkZDY3ZWE3ZTM="
-// }
-
-// 	Now we need to handle the response.
-
-// 	If Response is ok. Then handle response.
-// 	Example response:
-// 	{
-// 		"payload":  "{\"tx_id\":\"KEY_UUID\",\"origin_tx_id\":\"YOUR_UUID\"}",
-// 		 "timestamp": 1551767491,
-// 		 "signature":
-// 		   "MmFiMGQzNWY0ZDI4YzdmZWE0NmU1M2FkNWJhZmFhYzAxOWY0ZmEwYTgzZDc3ZjFkMmFjNjYxYzM3Y
-// 		   mViOWJlNjUyZGI4YTFkY2IwM2ViM2MzMmJmMmQyNmIzMWNmYzQ4OTA0YzQ4Y2I0Y2I0MTA1NmIy
-// 		   NjdlYjlkZDY3ZWE3ZTM="
-//    }
-
-//    Now verify the signature use selfsign package verify function.
-
-// 	If error, throw error.
-// Error JSON payload example
-// {
-// 	"valid": Boolean
-// 	"under_age": Boolean
-// 	"errors": {
-// 		“ERROR_IDENTIFIER”: “Description”
-// 	}
-// }
-// 	The possible errors are:
-// • TOO_SHORT: The provided identity number was too short
-// • TOO_LONG: The provided identity number was too long
-// • INVALID_CHARACTERS: The provided identity number contains non-numeric characters
-// • REPEATED_CHARACTERS: The provided identity number contains only a single repeated digit
-// • INVALID_BIRTH_DATE: The provided identity number encodes an invalid birth date
-// • CHECK_DIGIT_MISMATCH: The check digit did not match
-// • RSA_ID_ON_FOREIGN_TRACK: RSA identity number not allowed on foreign track
-
-// now store the response in the table
