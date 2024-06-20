@@ -38,14 +38,14 @@ func (h *Handler) StatusHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	var respOK response.APIResponse
-	err = respOK.FromJSON(body)
+	var resp response.APIResponse
+	err = resp.FromJSON(body)
 	if err != nil {
 		http.Error(w, "Failed to marshal response, "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	dataSigned := string(respOK.Payload) + fmt.Sprintf("%d", respOK.Timestamp)
-	sigD, _ := base64.StdEncoding.DecodeString(respOK.Signature)
+	dataSigned := string(resp.Payload) + fmt.Sprintf("%d", resp.Timestamp)
+	sigD, _ := base64.StdEncoding.DecodeString(resp.Signature)
 
 	err = certs.VerifySignature(dataSigned, string(sigD), h.Config)
 	if err != nil {

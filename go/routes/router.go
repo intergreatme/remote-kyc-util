@@ -13,6 +13,7 @@ func Router(handler *handlers.Handler) *http.ServeMux {
 	mux.HandleFunc("POST /api/allowlist", handler.AllowlistHandler)
 	mux.HandleFunc("POST /api/completion", handler.CompletionHandler)
 	mux.HandleFunc("POST /api/status", handler.StatusHandler)
+	mux.HandleFunc("POST /api/feedback", handler.FeedbackHandler)
 
 	return mux
 }

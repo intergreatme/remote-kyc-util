@@ -10,7 +10,7 @@ import (
 	"github.com/intergreatme/remote-kyc-util/response"
 )
 
-func (h *Handler) CompletionHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) FeedbackHandler(w http.ResponseWriter, r *http.Request) {
 	// Read the request body
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -34,7 +34,7 @@ func (h *Handler) CompletionHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO Deserialize Completion Payload if needed be
+	// TODO Deserialize Feedback Payload if needed be
 	w.Header().Set("Content-Type", "application/json")
 	w.Write([]byte(body))
 }
