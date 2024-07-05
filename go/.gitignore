@@ -6,3 +6,5 @@ config.yaml
 *.sqlite*
 .certs
 /tmp/
+*.mp4
+*.png
