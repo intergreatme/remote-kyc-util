@@ -48,3 +48,53 @@ func AllowlistAPI(payload RequestPayload, cnf config.Configuration) (client.Resp
 
 	return resp, nil
 }
+
+func GetFileAPI(payload RequestPayload, cnf config.Configuration) (client.Response, error) {
+	// Compress the JSON payload with gzip
+	out, err := payload.ToJSON()
+	if err != nil {
+		return client.Response{}, err
+	}
+
+	uri := fmt.Sprintf("%sgetfile/%s", cnf.URL, cnf.CompanyID)
+
+	opt := client.RequestOptions{
+		Compression:    client.CompressionGzip,
+		ProtocolScheme: "http://",
+	}
+
+	opt.AddHeader("Content-Type", "application/json")
+
+	resp, err := client.Post(uri, out, opt)
+	if err != nil {
+		fmt.Println(err)
+		return client.Response{}, err
+	}
+
+	return resp, nil
+}
+
+func GetLivelinessFileAPI(payload RequestPayload, cnf config.Configuration) (client.Response, error) {
+	// Compress the JSON payload with gzip
+	out, err := payload.ToJSON()
+	if err != nil {
+		return client.Response{}, err
+	}
+
+	uri := fmt.Sprintf("%sgetlivelinessfile/%s", cnf.URL, cnf.CompanyID)
+
+	opt := client.RequestOptions{
+		Compression:    client.CompressionGzip,
+		ProtocolScheme: "http://",
+	}
+
+	opt.AddHeader("Content-Type", "application/json")
+
+	resp, err := client.Post(uri, out, opt)
+	if err != nil {
+		fmt.Println(err)
+		return client.Response{}, err
+	}
+
+	return resp, nil
+}
