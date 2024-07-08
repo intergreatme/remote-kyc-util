@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/intergreatme/certcrypto"
@@ -27,7 +28,7 @@ func (h *Handler) GetFile(w http.ResponseWriter, r *http.Request) {
 
 	var fp file.FilePayload
 
-	err = json.Unmarshal(body, &fp) 
+	err = json.Unmarshal(body, &fp)
 	if err != nil {
 		http.Error(w, "Invalid JSON format", http.StatusBadRequest)
 		return
@@ -100,13 +101,32 @@ func (h *Handler) GetFile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Response 200 OK, will be binary data, as in the blob file.
+	// Check response content-type to assign correct file extension.
+	contentType := resp.Header.Get("Content-Type")
+	if contentType == "" {
+		http.Error(w, "Content-Type not found in the response", http.StatusBadRequest)
+		return
+	}
 
-	// Save the binary data to a file (optional)
-	err = os.WriteFile("file.png", payloadBody, 0644)
+	mimeType := strings.Split(contentType, ";")[0]
+	fileExtension := ".png"
+	switch mimeType {
+	case "image/jpeg":
+		fileExtension = ".jpeg"
+	case "application/pdf":
+		fileExtension = ".pdf"
+	}
+
+	fmt.Printf("The file extension for MIME type '%s' is '%s'\n", mimeType, fileExtension)
+
+	// Set file name, i.e. txID_file.png
+	fileName := fmt.Sprintf("%s_%s_%s%s", fp.TxID, fp.DocumentType, fp.FileType, fileExtension)
+	err = os.WriteFile(fileName, payloadBody, 0644)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	fmt.Printf("File saved as '%s'\n", fileName)
 
 	// Write file to webapp
 	w.Header().Set("Content-Type", "application/octet-stream")
@@ -194,9 +214,31 @@ func (h *Handler) GetLivelinessFile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Response 200 OK, will be binary data, as in the blob file.
+	// Check response content-type to assign correct file extension.
+	contentType := resp.Header.Get("Content-Type")
+	if contentType == "" {
+		http.Error(w, "Content-Type not found in the response", http.StatusBadRequest)
+		return
+	}
+
+	mimeType := strings.Split(contentType, ";")[0]
+	fileExtension := ".mp4"
+	if mimeType == "image/gif" {
+		fileExtension = ".gif"
+	}
+	fmt.Printf("The file extension for MIME type '%s' is '%s'\n", mimeType, fileExtension)
+
+	// Set file name, i.e. txID_gifResultID_liveliness.png
+	fileName := fmt.Sprintf("%s_%s_liveliness%s", f.TxID, f.ResultGIFID, fileExtension)
+	err = os.WriteFile(fileName, payloadBody, 0644)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	fmt.Printf("File saved as '%s'\n", fileName)
 
 	// Save the binary data to a file (optional)
-	err = os.WriteFile("video.mp4", payloadBody, 0644)
+	err = os.WriteFile(fileName, payloadBody, 0644)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

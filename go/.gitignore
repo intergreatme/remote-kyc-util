@@ -7,4 +7,8 @@ config.yaml
 .certs
 /tmp/
 *.mp4
+*.pdf
+*.jpeg
 *.png
+*.gif
+*.exe
