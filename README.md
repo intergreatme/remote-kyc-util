@@ -12,3 +12,6 @@ Feedback API calls tell the service provider information about what the user is 
 Completion is the final step of the transaction where we send the payload of information to the service provider with the KYC result included.
 
 We have also included our ID validation utility to validate RSA ID Numbers.
+
+Copyright (c) 2024 Intergreatme. All rights reserved.
+

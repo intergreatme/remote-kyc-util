@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2024 Intergreatme. All rights reserved.
+ */
+
 package file
 
 // Payload represents the structure of the payload

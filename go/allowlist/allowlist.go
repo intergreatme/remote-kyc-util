@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2024 Intergreatme. All rights reserved.
+ */
+
 package allowlist
 
 import (
@@ -5,7 +9,11 @@ import (
 	"errors"
 
 	"github.com/intergreatme/remote-kyc-util/validator"
-)
+)/*
+ * Copyright (c) 2024 Intergreatme. All rights reserved.
+ */
+
+
 
 type Allowlist struct {
 	OriginTxID      string `json:"origin_tx_id"`               // The caller's transaction ID - required
